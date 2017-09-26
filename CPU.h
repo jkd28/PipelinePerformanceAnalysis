@@ -31,6 +31,11 @@ struct pipeline {
     struct trace_item mem_wb;   // MEM/WB stage buffer
     struct trace_item wb_output;// Output
 };
+
+struct bpt_entry {
+   uint8_t taken;  //1 or 0 if branch is taken
+   uint8_t address;//branch's target
+};
 #endif
 
 #define TRACE_BUFSIZE 1024*1024

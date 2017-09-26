@@ -17,6 +17,7 @@ int main(int argc, char **argv)
   size_t size;
   char *trace_file_name;
   int trace_view_on = 0;
+  int branch_prediction_on = 0;
 
   unsigned char t_type = 0;
   unsigned char t_sReg_a= 0;
@@ -26,15 +27,19 @@ int main(int argc, char **argv)
   unsigned int t_Addr = 0;
 
   unsigned int cycle_number = 0;
+  
+  struct bpt_entry bp_table[64]; //creates branch prediction table 
 
-  if (argc == 1) {
-    fprintf(stdout, "\nUSAGE: tv <trace_file> <switch - any character>\n");
-    fprintf(stdout, "\n(switch) to turn on or off individual item view.\n\n");
+  if (argc == 1 || argc > 4) {
+    fprintf(stdout, "\nUSAGE: ./CPU <trace file> <trace switch> <branch prediction switch>");
+    fprintf(stdout, "\n(trace switch) to turn on or off individual item view.");
+    fprintf(stdout, "\n(brach prediction switch) to turn on or off branch prediction table.\n");
     exit(0);
   }
 
   trace_file_name = argv[1];
-  if (argc == 3) trace_view_on = atoi(argv[2]) ;
+  if (argc >= 3) trace_view_on = atoi(argv[2]) ;
+  if (argc == 4) branch_prediction_on = atoi(argv[3]);
 
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
 
