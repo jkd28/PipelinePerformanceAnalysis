@@ -27,9 +27,10 @@ int main(int argc, char **argv)
   unsigned int t_Addr = 0;
 
   unsigned int cycle_number = 0;
-  
-  struct bpt_entry bp_table[64]; //creates branch prediction table 
 
+  struct bpt_entry bp_table[64]; //creates branch prediction table
+
+  // Check for improper usage
   if (argc == 1 || argc > 4) {
     fprintf(stdout, "\nUSAGE: ./CPU <trace file> <trace switch> <branch prediction switch>");
     fprintf(stdout, "\n(trace switch) to turn on or off individual item view.");
@@ -37,29 +38,37 @@ int main(int argc, char **argv)
     exit(0);
   }
 
+  // Handle input values and set necessary values
   trace_file_name = argv[1];
   if (argc >= 3) trace_view_on = atoi(argv[2]) ;
   if (argc == 4) branch_prediction_on = atoi(argv[3]);
 
   fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
 
+  // Open the trace file
   trace_fd = fopen(trace_file_name, "rb");
 
+  // Handle trace file error
   if (!trace_fd) {
     fprintf(stdout, "\ntrace file %s not opened.\n\n", trace_file_name);
     exit(0);
   }
 
+  // Initialize the trace buffer
   trace_init();
 
+  // Begin simulation
   while(1) {
+    // Check that there are remaining instructions in the buffer
     size = trace_get_item(&tr_entry);
 
-    if (!size) {       /* no more instructions (trace_items) to simulate */
+    if (!size) {
+      // No more instructions (trace_items) to simulate
       printf("+ Simulation terminates at cycle : %u\n", cycle_number);
       break;
     }
-    else{              /* parse the next instruction to simulate */
+    else{
+      // Parse the next instruction to simulate
       cycle_number++;
       t_type = tr_entry->type;
       t_sReg_a = tr_entry->sReg_a;
@@ -112,6 +121,7 @@ int main(int argc, char **argv)
     }
   }
 
+  // Uninitialize the trace buffer
   trace_uninit();
 
   exit(0);
