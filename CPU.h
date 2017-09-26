@@ -16,14 +16,21 @@ enum trace_item_type {
 };
 
 struct trace_item {
-	unsigned char type;			// see above
-	unsigned char sReg_a;			// 1st operand
-	unsigned char sReg_b;			// 2nd operand
-	unsigned char dReg;			// dest. operand
-	unsigned int PC;			// program counter
-	unsigned int Addr;			// mem. address
+	unsigned char type;    // see above
+	unsigned char sReg_a;  // 1st operand
+	unsigned char sReg_b;  // 2nd operand
+	unsigned char dReg;    // dest. operand
+	unsigned int PC;       // program counter
+	unsigned int Addr;     // mem. address
 };
 
+struct pipeline {
+    struct trace_item if_id;    // ID/IF stage buffer
+    struct trace_item id_ex;    // ID/EX stage buffer
+    struct trace_item ex_mem;   // EX/MEM stage buffer
+    struct trace_item mem_wb;   // MEM/WB stage buffer
+    struct trace_item wb_output;// Output
+};
 #endif
 
 #define TRACE_BUFSIZE 1024*1024
