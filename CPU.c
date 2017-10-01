@@ -18,11 +18,13 @@ int main(int argc, char **argv)
 
    // variable declarations
    struct trace_item *tr_entry;
+   struct trace_item *no_op;
    size_t size;
    char *trace_file_name;
    int trace_view_on = 0;
    int branch_prediction_on = 0;
    int lw_hazard_detected = 0;
+   int hazard_buffer_skip = 0;
    unsigned int cycle_number = 0;
 
    struct pipeline *my_pipeline; //creates and initializes pipeline
@@ -62,8 +64,12 @@ int main(int argc, char **argv)
 
    // Begin simulation
    while(1) {
-      // Check that there are remaining instructions in the buffer
-      size = trace_get_item(&tr_entry);
+      if (!hazard_buffer_skip){
+         // Check that there are remaining instructions in the buffer
+         size = trace_get_item(&tr_entry);
+      }
+      // reset the buffer skip signal after 1 pass
+      hazard_buffer_skip = 0;
 
       if(!size){
          tr_entry= NULL;
@@ -75,40 +81,23 @@ int main(int argc, char **argv)
          }
       }
 
-      cycle_number++;
-
       // Hazard Detection
-      if(pipeline[1] != NULL){
-         if(pipeline[1]->type == ti_LOAD) {
-            printf("LOADWORD DETECTED\n");
-            if(pipeline[1]->type == ti_RTYPE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
+      if (pipeline[1] != NULL){
+         if (pipeline[1]->type == ti_LOAD) {
+            // Load Word Detected
+            if ((pipeline[1]->type == ti_RTYPE) || (pipeline[1]->type == ti_STORE) || (pipeline[1]->type == ti_BRANCH)){
+               if ((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_b)){
+                  // Load-Use Hazard Detected
+                  lw_hazard_detected = 1;
                }
-            } else if(pipeline[1]->type == ti_ITYPE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_LOAD){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_STORE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_BRANCH){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_JRTYPE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
+            } else if ((pipeline[1]->type == ti_ITYPE) || (pipeline[1]->type == ti_LOAD) || (pipeline[1]->type == ti_JRTYPE)){
+               if(pipeline[1]->dReg == pipeline[0]->sReg_a){
+                  // Load-Use Hazard Detected
+                  lw_hazard_detected = 1;
                }
             }
          }
       }
-
 
       //Advance instructions through pipeline
       //   pipeline[0] => IF/ID
@@ -117,17 +106,38 @@ int main(int argc, char **argv)
       //   pipeline[3] => MEM/WB
       //   pipeline[4] => Output
 
-      // MEM/WB to OUTPUT
-      pipeline[4] = pipeline[3];
-      // EX/MEM to MEM/WB
-      pipeline[3] = pipeline[2];
-      // ID/EX to EX/MEM
-      pipeline[2] = pipeline[1];
-      // IF/ID to ID/EX
-      pipeline[1] = pipeline[0];
-      // PC to IF/ID
-      pipeline[0] = tr_entry;
+      // Handle LOAD-USE Hazard
+      if (lw_hazard_detected){
+         // Advance the pipeline from the ID/EX Buffer on
+         pipeline[4] = pipeline[3];
+         pipeline[3] = pipeline[2];
+         pipeline[2] = pipeline[1];
 
+         // Create a bubble to insert to ID/EX
+         no_op = (struct trace_item *)malloc(sizeof(struct trace_item));
+         no_op->type   = 0;
+         no_op->sReg_a = 255;
+         no_op->sReg_b = 255;
+         no_op->dReg   = 255;
+         no_op->PC     = 0;
+         no_op->Addr   = 0;
+
+         // Insert the bubble
+         pipeline[1] = no_op;
+
+         // Unset the flag
+         lw_hazard_detected = 0;
+         hazard_buffer_skip = 1;
+      } else {
+         // Advance pipeline normally
+         pipeline[4] = pipeline[3]; // MEM/WB to OUTPUT
+         pipeline[3] = pipeline[2]; // EX/MEM to MEM/WB
+         pipeline[2] = pipeline[1]; // ID/EX to EX/MEM
+         pipeline[1] = pipeline[0]; // IF/ID to ID/EX
+         pipeline[0] = tr_entry;    // PC to IF/ID
+      }
+
+      cycle_number++;
       if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
          if(cycle_number<pipeline_size) {
             printf("[cycle %d] No output, pipeline filling.\n", cycle_number);
@@ -135,6 +145,7 @@ int main(int argc, char **argv)
          else if(pipeline[4]!=NULL) {
             switch(pipeline[4]->type) {
                case ti_NOP:
+                  free(pipeline[4]);
                   printf("[cycle %d] NOP:",cycle_number) ;
                   break;
                case ti_RTYPE:
