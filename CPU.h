@@ -24,14 +24,6 @@ struct trace_item {
 	unsigned int Addr;     // mem. address
 };
 
-struct pipeline {
-    struct trace_item if_id;    // ID/IF stage buffer
-    struct trace_item id_ex;    // ID/EX stage buffer
-    struct trace_item ex_mem;   // EX/MEM stage buffer
-    struct trace_item mem_wb;   // MEM/WB stage buffer
-    struct trace_item wb_output;// Output
-};
-
 struct bpt_entry {
    uint8_t taken;  //1 or 0 if branch is taken
    uint8_t address;//branch's target
