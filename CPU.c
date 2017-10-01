@@ -78,32 +78,18 @@ int main(int argc, char **argv)
       cycle_number++;
 
       // Hazard Detection
-      if(pipeline[1] != NULL){
-         if(pipeline[1]->type == ti_LOAD) {
+      if (pipeline[1] != NULL){
+         if (pipeline[1]->type == ti_LOAD) {
             printf("LOADWORD DETECTED\n");
-            if(pipeline[1]->type == ti_RTYPE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+            if ((pipeline[1]->type == ti_RTYPE) || (pipeline[1]->type == ti_STORE) || (pipeline[1]->type == ti_BRANCH)){
+               if ((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_b)){
                   printf("LOAD-USE HAZARD DETECTED\n");
+                  lw_hazard_detected = 1;
                }
-            } else if(pipeline[1]->type == ti_ITYPE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+            } else if ((pipeline[1]->type == ti_ITYPE) || (pipeline[1]->type == ti_LOAD) || (pipeline[1]->type == ti_JRTYPE)){
+               if(pipeline[1]->dReg == pipeline[0]->sReg_a){
                   printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_LOAD){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_STORE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_BRANCH){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
-               }
-            } else if(pipeline[1]->type == ti_JRTYPE){
-               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
-                  printf("LOAD-USE HAZARD DETECTED\n");
+                  lw_hazard_detected = 1;
                }
             }
          }
