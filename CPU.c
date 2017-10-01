@@ -13,23 +13,25 @@
 
 int main(int argc, char **argv)
 {
+   // define constants
+   const int pipeline_size = 5;
+
+   // variable declarations
    struct trace_item *tr_entry;
    size_t size;
    char *trace_file_name;
    int trace_view_on = 0;
    int branch_prediction_on = 0;
-
+   int lw_hazard_detected = 0;
    unsigned int cycle_number = 0;
 
-   const int pipeline_size= 5;
    struct pipeline *my_pipeline; //creates and initializes pipeline
    struct trace_item *pipeline[pipeline_size]; //NOT ITERATING PROPERLY!!!!!
+   struct bpt_entry *bp_table[64]; //creates branch prediction table
 
    // Initialize pipeline with each step at NULL
    for(int i= 0;i<(sizeof(pipeline)/sizeof(struct trace_item *));i++)
       pipeline[i]= NULL;
-
-   struct bpt_entry *bp_table[64]; //creates branch prediction table
 
    // Check for improper usage
    if (argc == 1 || argc > 4) {
@@ -75,7 +77,40 @@ int main(int argc, char **argv)
 
       cycle_number++;
 
-      //Advances instructions through pipeline
+      // Hazard Detection
+      if(pipeline[1] != NULL){
+         if(pipeline[1]->type == ti_LOAD) {
+            printf("LOADWORD DETECTED\n");
+            if(pipeline[1]->type == ti_RTYPE){
+               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+                  printf("LOAD-USE HAZARD DETECTED\n");
+               }
+            } else if(pipeline[1]->type == ti_ITYPE){
+               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+                  printf("LOAD-USE HAZARD DETECTED\n");
+               }
+            } else if(pipeline[1]->type == ti_LOAD){
+               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+                  printf("LOAD-USE HAZARD DETECTED\n");
+               }
+            } else if(pipeline[1]->type == ti_STORE){
+               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+                  printf("LOAD-USE HAZARD DETECTED\n");
+               }
+            } else if(pipeline[1]->type == ti_BRANCH){
+               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+                  printf("LOAD-USE HAZARD DETECTED\n");
+               }
+            } else if(pipeline[1]->type == ti_JRTYPE){
+               if((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_a)){
+                  printf("LOAD-USE HAZARD DETECTED\n");
+               }
+            }
+         }
+      }
+
+
+      //Advance instructions through pipeline
       //   pipeline[0] => IF/ID
       //   pipeline[1] => ID/EX
       //   pipeline[2] => EX/MEM
