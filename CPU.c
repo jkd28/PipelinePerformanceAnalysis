@@ -24,8 +24,11 @@ int main(int argc, char **argv)
    const int pipeline_size= 5;
    struct pipeline *my_pipeline; //creates and initializes pipeline
    struct trace_item *pipeline[pipeline_size]; //NOT ITERATING PROPERLY!!!!!
+
+   // Initialize pipeline with each step at NULL
    for(int i= 0;i<(sizeof(pipeline)/sizeof(struct trace_item *));i++)
       pipeline[i]= NULL;
+
    struct bpt_entry *bp_table[64]; //creates branch prediction table
 
    // Check for improper usage
@@ -59,26 +62,37 @@ int main(int argc, char **argv)
    while(1) {
       // Check that there are remaining instructions in the buffer
       size = trace_get_item(&tr_entry);
-      
+
       if(!size){
          tr_entry= NULL;
-         
+
          if (pipeline[4]==NULL) {
             // No more instructions (trace_items) to simulate
             printf("+ Simulation terminates at cycle : %u\n", cycle_number);
             break;
          }
       }
-     
+
       cycle_number++;
-     
-      //advances instructions through pipeline 
-      pipeline[4]= pipeline[3]; 
-      pipeline[3]= pipeline[2];
-      pipeline[2]= pipeline[1];
-      pipeline[1]= pipeline[0];
-      pipeline[0]= tr_entry;
-          
+
+      //Advances instructions through pipeline
+      //   pipeline[0] => IF/ID
+      //   pipeline[1] => ID/EX
+      //   pipeline[2] => EX/MEM
+      //   pipeline[3] => MEM/WB
+      //   pipeline[4] => Output
+
+      // MEM/WB to OUTPUT
+      pipeline[4] = pipeline[3];
+      // EX/MEM to MEM/WB
+      pipeline[3] = pipeline[2];
+      // ID/EX to EX/MEM
+      pipeline[2] = pipeline[1];
+      // IF/ID to ID/EX
+      pipeline[1] = pipeline[0];
+      // PC to IF/ID
+      pipeline[0] = tr_entry;
+
       if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
          if(cycle_number<pipeline_size) {
             printf("[cycle %d] No output, pipeline filling.\n", cycle_number);
