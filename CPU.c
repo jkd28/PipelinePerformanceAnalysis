@@ -11,6 +11,13 @@
 #include <arpa/inet.h>
 #include "CPU.h"
 
+struct trace_item * no_op_initializer();
+
+struct bpt_entry {
+   unsigned char taken;
+   unsigned int address;
+};
+
 int main(int argc, char **argv)
 {
    // define constants
@@ -18,23 +25,22 @@ int main(int argc, char **argv)
 
    // variable declarations
    struct trace_item *tr_entry;
-   struct trace_item *no_op;
+   struct trace_item *no_op, *no_op2;
+   struct trace_item *temp1, *temp2;
    size_t size;
    char *trace_file_name;
    int trace_view_on = 0;
    int branch_prediction_on = 0;
    int lw_hazard_detected = 0;
-   int hazard_buffer_skip = 0;
+   int branch_squashing = 0;
+   int buffer_skip = 0;
    unsigned int cycle_number = 0;
 
-   struct pipeline *my_pipeline; //creates and initializes pipeline
-   struct trace_item *pipeline[pipeline_size]; //NOT ITERATING PROPERLY!!!!!
-   struct bpt_entry *bp_table[64]; //creates branch prediction table
-
-   // Initialize pipeline with each step at NULL
-   for(int i= 0;i<(sizeof(pipeline)/sizeof(struct trace_item *));i++)
-      pipeline[i]= NULL;
-
+   struct trace_item *pipeline[pipeline_size];
+   struct bpt_entry *bp_table[64];
+   const unsigned int bpt_hash = 1008;
+   unsigned int bpt_index; 
+     
    // Check for improper usage
    if (argc == 1 || argc > 4) {
       fprintf(stdout, "\nUSAGE: ./CPU <trace file> <trace switch> <branch prediction switch>");
@@ -48,6 +54,10 @@ int main(int argc, char **argv)
    if (argc >= 3) trace_view_on = atoi(argv[2]) ;
    if (argc == 4) branch_prediction_on = atoi(argv[3]);
 
+   // Initialize pipeline with each step at NULL
+   for(int i= 0;i<(sizeof(pipeline)/sizeof(struct trace_item *));i++)
+      pipeline[i]= NULL;
+      
    fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
 
    // Open the trace file
@@ -64,23 +74,23 @@ int main(int argc, char **argv)
 
    // Begin simulation
    while(1) {
-      if (!hazard_buffer_skip){
+      if (!buffer_skip){
          // Check that there are remaining instructions in the buffer
          size = trace_get_item(&tr_entry);
       }
       // reset the buffer skip signal after 1 pass
-      hazard_buffer_skip = 0;
-
+      buffer_skip = 0;
+   
       if(!size){
          tr_entry= NULL;
-
+      
          if (pipeline[4]==NULL) {
             // No more instructions (trace_items) to simulate
             printf("+ Simulation terminates at cycle : %u\n", cycle_number);
             break;
          }
       }
-
+   
       // Hazard Detection
       if (pipeline[1] != NULL){
          if (pipeline[1]->type == ti_LOAD) {
@@ -90,7 +100,8 @@ int main(int argc, char **argv)
                   // Load-Use Hazard Detected
                   lw_hazard_detected = 1;
                }
-            } else if ((pipeline[1]->type == ti_ITYPE) || (pipeline[1]->type == ti_LOAD) || (pipeline[1]->type == ti_JRTYPE)){
+            } 
+            else if ((pipeline[1]->type == ti_ITYPE) || (pipeline[1]->type == ti_LOAD) || (pipeline[1]->type == ti_JRTYPE)){
                if(pipeline[1]->dReg == pipeline[0]->sReg_a){
                   // Load-Use Hazard Detected
                   lw_hazard_detected = 1;
@@ -98,37 +109,50 @@ int main(int argc, char **argv)
             }
          }
       }
-
+         
       //Advance instructions through pipeline
       //   pipeline[0] => IF/ID
       //   pipeline[1] => ID/EX
       //   pipeline[2] => EX/MEM
       //   pipeline[3] => MEM/WB
       //   pipeline[4] => Output
-
+   
       // Handle LOAD-USE Hazard
       if (lw_hazard_detected){
          // Advance the pipeline from the ID/EX Buffer on
          pipeline[4] = pipeline[3];
          pipeline[3] = pipeline[2];
          pipeline[2] = pipeline[1];
-
+      
          // Create a bubble to insert to ID/EX
-         no_op = (struct trace_item *)malloc(sizeof(struct trace_item));
-         no_op->type   = 0;
-         no_op->sReg_a = 255;
-         no_op->sReg_b = 255;
-         no_op->dReg   = 255;
-         no_op->PC     = 0;
-         no_op->Addr   = 0;
-
+         no_op = no_op_initializer();
+      
          // Insert the bubble
          pipeline[1] = no_op;
-
+      
          // Unset the flag
          lw_hazard_detected = 0;
-         hazard_buffer_skip = 1;
-      } else {
+         buffer_skip = 1;
+      } 
+      else if(branch_squashing) { //handle instruction
+         if(branch_squashing==2)
+         {
+            tr_entry = temp2;
+            
+            buffer_skip = 1;
+         }
+         else
+            tr_entry = temp1;
+      
+         pipeline[4] = pipeline[3];
+         pipeline[3] = pipeline[2];
+         pipeline[2] = pipeline[1];
+         pipeline[1] = pipeline[0];
+         pipeline[0] = tr_entry;
+         
+         branch_squashing--;
+      }   
+      else {
          // Advance pipeline normally
          pipeline[4] = pipeline[3]; // MEM/WB to OUTPUT
          pipeline[3] = pipeline[2]; // EX/MEM to MEM/WB
@@ -136,7 +160,112 @@ int main(int argc, char **argv)
          pipeline[1] = pipeline[0]; // IF/ID to ID/EX
          pipeline[0] = tr_entry;    // PC to IF/ID
       }
-
+      
+      if(pipeline[2]!=NULL && pipeline[2]->type == ti_BRANCH) //branch handler
+      {
+         if(!branch_prediction_on) //no branch prediction table (assume "not taken")
+         {
+            if(pipeline[2]->Addr == pipeline[1]->PC) //branch taken 
+            {               
+               temp1 = pipeline[0]; //removes instructions from pipeline
+               temp2 = pipeline[1];
+                                                                      
+               no_op = no_op_initializer();
+               no_op2 = no_op_initializer();
+                                          
+               pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
+               pipeline[0] = no_op;
+                           
+               branch_squashing = 2; //sets flags
+               buffer_skip = 1;
+            }        
+         }
+         else //single bit branch prediction table
+         {
+            bpt_index = (pipeline[2]->PC & bpt_hash) >> 4;
+            
+            if(bp_table[bpt_index]==NULL) //if entry has not been initialized yet (assume "not taken")
+            {
+               bp_table[bpt_index]= (struct bpt_entry *)malloc(sizeof(struct bpt_entry));
+               bp_table[bpt_index]->address= pipeline[2]->PC;
+            
+               if(pipeline[2]->Addr == pipeline[1]->PC) //branch taken
+               {
+                  bp_table[bpt_index]->taken= 1;
+               
+                  temp1 = pipeline[0]; //removes instructions from pipeline
+                  temp2 = pipeline[1];
+                                                                      
+                  no_op = no_op_initializer();
+                  no_op2 = no_op_initializer();
+                                          
+                  pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
+                  pipeline[0] = no_op;
+                           
+                  branch_squashing = 2; //sets flags
+                  buffer_skip = 1;
+               }
+               else //branch not taken
+                  bp_table[bpt_index]->taken= 0;
+            }
+            else //entry already initialized
+            {
+               if(bp_table[bpt_index]->address == pipeline[2]->PC) //entry refers to correct instruction (no collision has occured)
+               {
+                  //bad prediction: table says taken but branch is not taken, or table says not taken but branch is taken
+                  if(((pipeline[2]->Addr != pipeline[1]->PC) && bp_table[bpt_index]->taken) || ((pipeline[2]->Addr == pipeline[1]->PC) && !bp_table[bpt_index]->taken))
+                  {
+                     bp_table[bpt_index]->taken = !bp_table[bpt_index]->taken; //flips entry's taken flag
+                     
+                     temp1 = pipeline[0]; //removes instructions from pipeline
+                     temp2 = pipeline[1];
+                                                                      
+                     no_op = no_op_initializer();
+                     no_op2 = no_op_initializer();
+                                          
+                     pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
+                     pipeline[0] = no_op;
+                           
+                     branch_squashing = 2; //sets flags
+                     buffer_skip = 1;
+                  }
+               }
+               else //collision has occured (assume not taken)
+               {
+                  bp_table[bpt_index]->address= pipeline[2]->PC; //replaces old entry (hash collision)
+                  
+                  if(pipeline[2]->Addr == pipeline[1]->PC) //branch taken
+                  {
+                     bp_table[bpt_index]->taken= 1;
+                  
+                     temp1 = pipeline[0]; //removes instructions from pipeline
+                     temp2 = pipeline[1];
+                                                                      
+                     no_op = no_op_initializer();
+                     no_op2 = no_op_initializer();
+                                          
+                     pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
+                     pipeline[0] = no_op;
+                           
+                     branch_squashing = 2; //sets flags
+                     buffer_skip = 1;
+                  }
+                  else //branch not taken
+                     bp_table[bpt_index]->taken= 0;
+               }
+            }
+         
+//             printf("Branch Prediction Table\n");
+//             for(int i= 0;i<63;i++)
+//             {
+//                if(bp_table[i]==NULL)
+//                   printf("%d\tXXXXXX\tX\n", i);   
+//                else
+//                   printf("%d\t%x\t%x\n", i, bp_table[i]->address, bp_table[i]->taken);
+//             }            
+         }
+      }
+   
       cycle_number++;
       if (trace_view_on) {/* print the executed instruction if trace_view_on=1 */
          if(cycle_number<pipeline_size) {
@@ -146,7 +275,7 @@ int main(int argc, char **argv)
             switch(pipeline[4]->type) {
                case ti_NOP:
                   free(pipeline[4]);
-                  printf("[cycle %d] NOP:",cycle_number) ;
+                  printf("[cycle %d] NOP:\n",cycle_number) ;
                   break;
                case ti_RTYPE:
                   printf("[cycle %d] RTYPE:",cycle_number) ;
@@ -173,7 +302,7 @@ int main(int argc, char **argv)
                   printf(" (PC: %x)(addr: %x)\n", pipeline[4]->PC,pipeline[4]->Addr);
                   break;
                case ti_SPECIAL:
-                  printf("[cycle %d] SPECIAL:",cycle_number) ;
+                  printf("[cycle %d] SPECIAL:\n",cycle_number) ;
                   break;
                case ti_JRTYPE:
                   printf("[cycle %d] JRTYPE:",cycle_number) ;
@@ -188,4 +317,22 @@ int main(int argc, char **argv)
    trace_uninit();
 
    exit(0);
+}
+
+struct trace_item * no_op_initializer()
+{
+   struct trace_item *no_op;
+   
+   //allocates memory for no-op
+   no_op = (struct trace_item *)malloc(sizeof(struct trace_item));
+   
+   //sets dummy values for no-op
+   no_op->type   = 0;
+   no_op->sReg_a = 255;
+   no_op->sReg_b = 255;
+   no_op->dReg   = 255;
+   no_op->PC     = 0;
+   no_op->Addr   = 0;
+   
+   return(no_op);
 }
