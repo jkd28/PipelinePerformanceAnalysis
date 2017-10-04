@@ -32,7 +32,7 @@ int main(int argc, char **argv)
    int trace_view_on = 0;
    int branch_prediction_on = 0;
    int lw_hazard_detected = 0;
-   int branch_squashing = 0;
+   int squashing = 0;
    int buffer_skip = 0;
    unsigned int cycle_number = 0;
 
@@ -140,8 +140,8 @@ int main(int argc, char **argv)
          lw_hazard_detected = 0;
          buffer_skip = 1;
       } 
-      else if(branch_squashing) { //handle instruction
-         if(branch_squashing==2)
+      else if(squashing) { //handle instruction
+         if(squashing==2)
          {
             tr_entry = temp2;
             
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
          pipeline[1] = pipeline[0];
          pipeline[0] = tr_entry;
          
-         branch_squashing--;
+         squashing--;
       }   
       else {
          // Advance pipeline normally
@@ -165,6 +165,21 @@ int main(int argc, char **argv)
          pipeline[2] = pipeline[1]; // ID/EX to EX/MEM
          pipeline[1] = pipeline[0]; // IF/ID to ID/EX
          pipeline[0] = tr_entry;    // PC to IF/ID
+      }
+      
+      if(pipeline[2]!=NULL && (pipeline[2]->type == ti_JTYPE || pipeline[2]->type == ti_JRTYPE)) //jump handler
+      {
+         temp1 = pipeline[0]; //removes instructions from pipeline
+         temp2 = pipeline[1];
+                                                                      
+         no_op = no_op_initializer();
+         no_op2 = no_op_initializer();
+                                          
+         pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
+         pipeline[0] = no_op;
+                           
+         squashing = 2; //sets flags
+         buffer_skip = 1;
       }
       
       if(pipeline[2]!=NULL && pipeline[2]->type == ti_BRANCH) //branch handler
@@ -182,7 +197,7 @@ int main(int argc, char **argv)
                pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
                pipeline[0] = no_op;
                            
-               branch_squashing = 2; //sets flags
+               squashing = 2; //sets flags
                buffer_skip = 1;
             }        
          }
@@ -208,7 +223,7 @@ int main(int argc, char **argv)
                   pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
                   pipeline[0] = no_op;
                            
-                  branch_squashing = 2; //sets flags
+                  squashing = 2; //sets flags
                   buffer_skip = 1;
                }
                else //branch not taken
@@ -232,7 +247,7 @@ int main(int argc, char **argv)
                      pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
                      pipeline[0] = no_op;
                            
-                     branch_squashing = 2; //sets flags
+                     squashing = 2; //sets flags
                      buffer_skip = 1;
                   }
                }
@@ -253,7 +268,7 @@ int main(int argc, char **argv)
                      pipeline[1] = no_op2; //inserts bubble (squashes instructions)               
                      pipeline[0] = no_op;
                            
-                     branch_squashing = 2; //sets flags
+                     squashing = 2; //sets flags
                      buffer_skip = 1;
                   }
                   else //branch not taken
@@ -261,12 +276,12 @@ int main(int argc, char **argv)
                }
             }
                //output BPT for debugging purposes
-//             printf("Branch Prediction Table\n");
-//             for(int i= 0;i<63;i++)
-//             {
-//                if(bp_table[i]!=NULL)
-//                   printf("%d\t%x\t%x\n", i, bp_table[i]->address, bp_table[i]->taken);
-//             }          
+         //             printf("Branch Prediction Table\n");
+         //             for(int i= 0;i<63;i++)
+         //             {
+         //                if(bp_table[i]!=NULL)
+         //                   printf("%d\t%x\t%x\n", i, bp_table[i]->address, bp_table[i]->taken);
+         //             }          
          }           
       }
    
