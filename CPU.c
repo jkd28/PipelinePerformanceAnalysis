@@ -58,6 +58,12 @@ int main(int argc, char **argv)
    for(int i= 0;i<(sizeof(pipeline)/sizeof(struct trace_item *));i++)
       pipeline[i]= NULL;
       
+   if(branch_prediction_on)
+   {
+      for(int i= 0;i<(sizeof(bp_table)/sizeof(struct bpt_entry *));i++)
+         bp_table[i]= NULL;
+   }
+      
    fprintf(stdout, "\n ** opening file %s\n", trace_file_name);
 
    // Open the trace file
@@ -254,16 +260,14 @@ int main(int argc, char **argv)
                      bp_table[bpt_index]->taken= 0;
                }
             }
-         
+               //output BPT for debugging purposes
 //             printf("Branch Prediction Table\n");
 //             for(int i= 0;i<63;i++)
 //             {
-//                if(bp_table[i]==NULL)
-//                   printf("%d\tXXXXXX\tX\n", i);   
-//                else
+//                if(bp_table[i]!=NULL)
 //                   printf("%d\t%x\t%x\n", i, bp_table[i]->address, bp_table[i]->taken);
-//             }            
-         }
+//             }          
+         }           
       }
    
       cycle_number++;
