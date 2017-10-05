@@ -128,7 +128,10 @@ int main(int argc, char **argv)
          
          REG[LW_LOC] = temp1; //removes instructions from pipeline
          REG[ALU_LOC] = temp2;
-         instruction_buffer[1] = temp3;
+         
+         if(temp3!=NULL)
+            instruction_buffer[1] = temp3;
+
          instruction_buffer[0] = temp4;
       }
    
@@ -268,8 +271,12 @@ int main(int argc, char **argv)
                
       cycle_number++;
    
+      if(trace_view_on && cycle_number<5) {
+         printf("[cycle %d] No output, pipeline filling.\n", cycle_number);
+         printf("[cycle %d] No output, pipeline filling.\n", cycle_number);
+      }
+   
       if ((trace_view_on) && (lw_sw_pipeline[3] != NULL) && (alu_br_pipeline[3] != NULL)) {
-            // Print first completed instruction
          switch(lw_sw_pipeline[3]->type) {
             case ti_NOP:
                free(lw_sw_pipeline[3]);
@@ -307,7 +314,7 @@ int main(int argc, char **argv)
                printf(" (PC: %x) (sReg_a: %d)(addr: %x)\n", lw_sw_pipeline[3]->PC, lw_sw_pipeline[3]->dReg, lw_sw_pipeline[3]->Addr);
                break;
          }
-      
+         
             // Print first completed instruction
          switch(alu_br_pipeline[3]->type) {
             case ti_NOP:
