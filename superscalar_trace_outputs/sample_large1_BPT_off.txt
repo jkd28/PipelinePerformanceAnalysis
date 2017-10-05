@@ -1,0 +1,3 @@
+
+ ** opening file traces/sample_large1.tr
++ Simulation terminates at cycle : 100474817
