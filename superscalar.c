@@ -196,19 +196,72 @@ int main(int argc, char **argv)
             REG[ALU_LOC] = no_op_initializer();
          }
       }
-          
+      
+      //branch handler    
       if(REG[LW_LOC]!=NULL && REG[ALU_LOC]!=NULL && alu_br_pipeline[0]!=NULL && alu_br_pipeline[0]->type==ti_BRANCH)
       {
-         if(!branch_prediction_on)
+         if(!branch_prediction_on) //no branch prediction table (assume "not taken")
          {
-            if((alu_br_pipeline[0]->Addr == REG[LW_LOC]->PC) || (alu_br_pipeline[0]->Addr == REG[ALU_LOC]->PC))
+            if((alu_br_pipeline[0]->Addr == REG[LW_LOC]->PC) || (alu_br_pipeline[0]->Addr == REG[ALU_LOC]->PC)) //branch taken
             {
                temp1 = REG[LW_LOC]; //removes instructions from pipeline
                temp2 = REG[ALU_LOC];
                         
                squashing = 3; //sets flags
             }
-         }   
+         }
+         else
+         {
+            if(bp_table[bpt_index]==NULL) //if entry has not been initialized yet (assume "not taken")
+            {
+               bp_table[bpt_index]= (struct bpt_entry *)malloc(sizeof(struct bpt_entry));
+               bp_table[bpt_index]->address= alu_br_pipeline[0]->PC;
+            
+               if((alu_br_pipeline[0]->Addr == REG[LW_LOC]->PC) || (alu_br_pipeline[0]->Addr == REG[ALU_LOC]->PC)) //branch taken
+               {
+                  bp_table[bpt_index]->taken= 1;
+                  
+                  temp1 = REG[LW_LOC]; //removes instructions from pipeline
+                  temp2 = REG[ALU_LOC];
+                        
+                  squashing = 3; //sets flags
+               }
+               else //branch not taken
+                  bp_table[bpt_index]->taken= 0;
+            }
+            else //entry already initialized
+            {
+               if(bp_table[bpt_index]->address == alu_br_pipeline[0]->PC) //entry refers to correct instruction (no collision has occured)
+               {
+                  //bad prediction: table says taken but branch is not taken, or table says not taken but branch is taken
+                  if((((alu_br_pipeline[0]->Addr != REG[LW_LOC]->PC) && (alu_br_pipeline[0]->Addr != REG[ALU_LOC]->PC)) && bp_table[bpt_index]->taken) || (((alu_br_pipeline[0]->Addr == REG[LW_LOC]->PC) || (alu_br_pipeline[0]->Addr == REG[ALU_LOC]->PC)) && !bp_table[bpt_index]->taken))
+                  {
+                     bp_table[bpt_index]->taken= !bp_table[bpt_index]->taken;
+                     
+                     temp1 = REG[LW_LOC]; //removes instructions from pipeline
+                     temp2 = REG[ALU_LOC];
+                        
+                     squashing = 3; //sets flags
+                  }
+               }
+               else //collision has occured (assume not taken)
+               {
+                  bp_table[bpt_index]->address= alu_br_pipeline[0]->PC; //replaces old entry (hash collision)
+               
+                  if((alu_br_pipeline[0]->Addr == REG[LW_LOC]->PC) || (alu_br_pipeline[0]->Addr == REG[ALU_LOC]->PC)) //branch taken
+                  {
+                     bp_table[bpt_index]->taken= 1;
+                     
+                     temp1 = REG[LW_LOC]; //removes instructions from pipeline
+                     temp2 = REG[ALU_LOC];
+                        
+                     squashing = 3; //sets flags
+                  }
+                  else //branch not taken
+                     bp_table[bpt_index]->taken= 0;
+               }
+            }
+         }
       }
                
       cycle_number++;
