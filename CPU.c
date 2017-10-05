@@ -101,13 +101,13 @@ int main(int argc, char **argv)
       if (pipeline[1] != NULL){
          if (pipeline[1]->type == ti_LOAD) {
             // Load Word Detected
-            if ((pipeline[1]->type == ti_RTYPE) || (pipeline[1]->type == ti_STORE) || (pipeline[1]->type == ti_BRANCH)){
+            if ((pipeline[0]->type == ti_RTYPE) || (pipeline[0]->type == ti_STORE) || (pipeline[0]->type == ti_BRANCH)){
                if ((pipeline[1]->dReg == pipeline[0]->sReg_a) || (pipeline[1]->dReg == pipeline[0]->sReg_b)){
                   // Load-Use Hazard Detected
                   lw_hazard_detected = 1;
                }
             } 
-            else if ((pipeline[1]->type == ti_ITYPE) || (pipeline[1]->type == ti_LOAD) || (pipeline[1]->type == ti_JRTYPE)){
+            else if ((pipeline[0]->type == ti_ITYPE) || (pipeline[0]->type == ti_LOAD) || (pipeline[0]->type == ti_JRTYPE)){
                if(pipeline[1]->dReg == pipeline[0]->sReg_a){
                   // Load-Use Hazard Detected
                   lw_hazard_detected = 1;
