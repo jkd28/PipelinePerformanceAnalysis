@@ -25,7 +25,6 @@ int main(int argc, char **argv)
 
    // variable declarations
    struct trace_item *tr_entry;
-   struct trace_item *no_op, *no_op2;
    struct trace_item *temp1, *temp2;
    size_t size;
    char *trace_file_name;
@@ -130,11 +129,8 @@ int main(int argc, char **argv)
          pipeline[3] = pipeline[2];
          pipeline[2] = pipeline[1];
 
-         // Create a bubble to insert to ID/EX
-         no_op = no_op_initializer();
-
-         // Insert the bubble
-         pipeline[1] = no_op;
+         // Insert a bubble at ID/EX
+         pipeline[1] = no_op_initializer();
 
          // Unset the flag
          lw_hazard_detected = 0;
@@ -172,11 +168,8 @@ int main(int argc, char **argv)
          temp1 = pipeline[0]; //removes instructions from pipeline
          temp2 = pipeline[1];
 
-         no_op = no_op_initializer();
-         no_op2 = no_op_initializer();
-
-         pipeline[1] = no_op2; //inserts bubble (squashes instructions)
-         pipeline[0] = no_op;
+         pipeline[1] = no_op_initializer(); //inserts bubble (squashes instructions)
+         pipeline[0] = no_op_initializer();
 
          squashing = 2; //sets flags
          buffer_skip = 1;
@@ -191,11 +184,8 @@ int main(int argc, char **argv)
                temp1 = pipeline[0]; //removes instructions from pipeline
                temp2 = pipeline[1];
 
-               no_op = no_op_initializer();
-               no_op2 = no_op_initializer();
-
-               pipeline[1] = no_op2; //inserts bubble (squashes instructions)
-               pipeline[0] = no_op;
+               pipeline[1] = no_op_initializer(); //inserts bubble (squashes instructions)
+               pipeline[0] = no_op_initializer();
 
                squashing = 2; //sets flags
                buffer_skip = 1;
@@ -217,11 +207,8 @@ int main(int argc, char **argv)
                   temp1 = pipeline[0]; //removes instructions from pipeline
                   temp2 = pipeline[1];
 
-                  no_op = no_op_initializer();
-                  no_op2 = no_op_initializer();
-
-                  pipeline[1] = no_op2; //inserts bubble (squashes instructions)
-                  pipeline[0] = no_op;
+                  pipeline[1] = no_op_initializer(); //inserts bubble (squashes instructions)
+                  pipeline[0] = no_op_initializer();
 
                   squashing = 2; //sets flags
                   buffer_skip = 1;
@@ -241,11 +228,8 @@ int main(int argc, char **argv)
                      temp1 = pipeline[0]; //removes instructions from pipeline
                      temp2 = pipeline[1];
 
-                     no_op = no_op_initializer();
-                     no_op2 = no_op_initializer();
-
-                     pipeline[1] = no_op2; //inserts bubble (squashes instructions)
-                     pipeline[0] = no_op;
+                     pipeline[1] = no_op_initializer(); //inserts bubble (squashes instructions)
+                     pipeline[0] = no_op_initializer();
 
                      squashing = 2; //sets flags
                      buffer_skip = 1;
@@ -262,11 +246,8 @@ int main(int argc, char **argv)
                      temp1 = pipeline[0]; //removes instructions from pipeline
                      temp2 = pipeline[1];
 
-                     no_op = no_op_initializer();
-                     no_op2 = no_op_initializer();
-
-                     pipeline[1] = no_op2; //inserts bubble (squashes instructions)
-                     pipeline[0] = no_op;
+                     pipeline[1] = no_op_initializer(); //inserts bubble (squashes instructions)
+                     pipeline[0] = no_op_initializer();
 
                      squashing = 2; //sets flags
                      buffer_skip = 1;
@@ -275,13 +256,6 @@ int main(int argc, char **argv)
                      bp_table[bpt_index]->taken= 0;
                }
             }
-               //output BPT for debugging purposes
-         //             printf("Branch Prediction Table\n");
-         //             for(int i= 0;i<63;i++)
-         //             {
-         //                if(bp_table[i]!=NULL)
-         //                   printf("%d\t%x\t%x\n", i, bp_table[i]->address, bp_table[i]->taken);
-         //             }
          }
       }
 
