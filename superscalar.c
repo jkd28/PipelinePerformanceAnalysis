@@ -166,6 +166,8 @@ int main(int argc, char **argv)
                REG[LW_LOC]  = instruction_buffer[0];
                REG[ALU_LOC] = instruction_buffer[1];
             }
+            temp3 = instruction_buffer[1];
+            temp4 = instruction_buffer[0];
             instruction_buffer[1] = NULL;
             instruction_buffer[0] = NULL;
          }
@@ -184,6 +186,7 @@ int main(int argc, char **argv)
             }
               // Push the instruction_buffer through by one
             instruction_buffer[1] = instruction_buffer[0];
+            temp4 = instruction_buffer[0];
             instruction_buffer[0] = NULL;
          }
          else
@@ -202,8 +205,6 @@ int main(int argc, char **argv)
             {
                temp1 = REG[LW_LOC]; //removes instructions from pipeline
                temp2 = REG[ALU_LOC];
-               temp3 = instruction_buffer[1];
-               temp4 = instruction_buffer[0];
                         
                squashing = 3; //sets flags
             }
