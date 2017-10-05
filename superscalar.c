@@ -212,6 +212,8 @@ int main(int argc, char **argv)
          }
          else
          {
+            bpt_index = (alu_br_pipeline[0]->PC & bpt_hash) >> 4;
+         
             if(bp_table[bpt_index]==NULL) //if entry has not been initialized yet (assume "not taken")
             {
                bp_table[bpt_index]= (struct bpt_entry *)malloc(sizeof(struct bpt_entry));
