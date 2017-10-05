@@ -24,7 +24,7 @@ sample_long2.tr	| 5.42%
 MEAN:		| 5.93%
 STDEV:		| 4.36%
 
-Adding a branch predictor on the single pipeline CPU leads to a noticeable difference in the number of cycles taken. This difference differs greatly depending on the code running through the CPU (as shown by the large standard deviation above). Given the organization of the code and the placements of the branches, it is entirely possible that a branch predictor could lead to an increase in cycles. This issue can be mitigated and the effect of the branch predictor magnified by the inclusion of a second "taken" bit or the addition of added intelligence to the compiler.
+The addition of a branch predictor on the single pipeline CPU lead to a statistically significant decrease in the number of cycles taken. This difference differs greatly depending on the code running through the CPU (as shown by the large standard deviation above). This large deviation is most likely due to differences in the order of instructions across the different traces. In fact, it is entirely possible that a branch predictor could lead to an increase in cycles. This issue can be mitigated and the effect of the branch predictor magnified by the inclusion of a second "taken" bit, the addition of added intelligence to the compiler, or by moving the stage branches are resolved in from EX to an earlier stage.
 
 ===================
 || Two Pipelines ||
@@ -32,34 +32,34 @@ Adding a branch predictor on the single pipeline CPU leads to a noticeable diffe
 
 Trace File	| Percent Decrease in Cycles Over Single Pipeline
 =================================================================
-sample.tr	| 
-sample1.tr	| 
-sample2.tr	| 
-sample3.tr	| 
-sample4.tr	| 
-sample_long1.tr	| 
-sample_long2.tr	| 
+sample.tr	| 17.08%
+sample1.tr	| 16.50%
+sample2.tr	| 18.91%
+sample3.tr	| 20.01%
+sample4.tr	| 18.49%
+sample_long1.tr	| 20.25%
+sample_long2.tr	| 17.73%
 =================================================================
-MEAN:		| 
-STDEV:		| 
+MEAN:		| 18.42%
+STDEV:		| 1.31%
 
-INSERT EXPLANATION
+The addition of a second pipeline lead to very large decrease in cycles. This decrease is around 4 times that caused by the addition of a branch prediction table, and is caused in spite of a noticeable increase in the number of no-ops inserted. While, the dynamic scheduler adds many no-ops, owing to the constraints of the superscalar design, the fact that two instructions can be grouped together and progress through the pipeline concurrently greatly impacts cycles taken. Steps that can be take to further increase the effect of the second pipeline include using a more intelligent compiler and adding addition hardware to mitigate the constraints of the superscalar design.
 
 =========================================
-|| Branch Predictor with Two Pipelines ||
+|| Two Pipelines with Branch Predictor ||
 =========================================
 
 Trace File	| Percent Decrease in Cycles w/ BPT
 ===================================================
-sample.tr	| 
-sample1.tr	| 
-sample2.tr	| 
-sample3.tr	| 
-sample4.tr	| 
-sample_long1.tr	| 
-sample_long2.tr	| 
+sample.tr	| 1.88%
+sample1.tr	| 9.68%
+sample2.tr	| 1.40%
+sample3.tr	| 2.14%
+sample4.tr	| 4.50%
+sample_long1.tr	| 4.20%
+sample_long2.tr	| 6.28%
 ===================================================
-MEAN:		| 
-STDEV:		| 
+MEAN:		| 4.30%
+STDEV:		| 2.72%
 
-INSERT EXPLANATION
+As expected, the addition of a branch prediction table in the superscalar CPU also lead to a statistically significant decrease in cycles. A slight decrease in the mean and a approximately 50% decrease in standard deviation can be explained by inefficiencies introduced by the dynamic scheduler. As stated before, the effect of the branch predictor can be made more significant by the inclusion of a second "taken" bit, the addition of added intelligence to the compiler, or by moving the stage branches are resolved in from EX to an earlier stage.
