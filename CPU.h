@@ -24,10 +24,6 @@ struct trace_item {
 	unsigned int Addr;     // mem. address
 };
 
-struct bpt_entry {
-   uint8_t taken;  //1 or 0 if branch is taken
-   uint8_t address;//branch's target
-};
 #endif
 
 #define TRACE_BUFSIZE 1024*1024
