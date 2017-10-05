@@ -4,3 +4,7 @@ CPU
 *.plist
 
 trace_generator.dSYM/Contents/Resources/DWARF/trace_generator
+
+*.zip
+
+superscalar
