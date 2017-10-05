@@ -34,6 +34,7 @@ int main(int argc, char **argv)
    int lw_hazard_detected = 0;
    int squashing = 0;
    int buffer_skip = 0;
+   int branch_near_end = 0;
    unsigned int cycle_number = 0;
 
    struct trace_item *pipeline[pipeline_size];
@@ -182,11 +183,14 @@ int main(int argc, char **argv)
          buffer_skip = 1;
       }
       
+      if(pipeline[1]==NULL)
+         branch_near_end = 1;
+      
       if(pipeline[2]!=NULL && pipeline[2]->type == ti_BRANCH) //branch handler
       {
          if(!branch_prediction_on) //no branch prediction table (assume "not taken")
          {
-            if(pipeline[2]->Addr == pipeline[1]->PC) //branch taken 
+            if(!branch_near_end && (pipeline[2]->Addr == pipeline[1]->PC)) //branch taken 
             {               
                temp1 = pipeline[0]; //removes instructions from pipeline
                temp2 = pipeline[1];
@@ -210,7 +214,7 @@ int main(int argc, char **argv)
                bp_table[bpt_index]= (struct bpt_entry *)malloc(sizeof(struct bpt_entry));
                bp_table[bpt_index]->address= pipeline[2]->PC;
             
-               if(pipeline[2]->Addr == pipeline[1]->PC) //branch taken
+               if(!branch_near_end && (pipeline[2]->Addr == pipeline[1]->PC)) //branch taken
                {
                   bp_table[bpt_index]->taken= 1;
                
@@ -234,7 +238,7 @@ int main(int argc, char **argv)
                if(bp_table[bpt_index]->address == pipeline[2]->PC) //entry refers to correct instruction (no collision has occured)
                {
                   //bad prediction: table says taken but branch is not taken, or table says not taken but branch is taken
-                  if(((pipeline[2]->Addr != pipeline[1]->PC) && bp_table[bpt_index]->taken) || ((pipeline[2]->Addr == pipeline[1]->PC) && !bp_table[bpt_index]->taken))
+                  if(!branch_near_end && (((pipeline[2]->Addr != pipeline[1]->PC) && bp_table[bpt_index]->taken) || ((pipeline[2]->Addr == pipeline[1]->PC) && !bp_table[bpt_index]->taken)))
                   {
                      bp_table[bpt_index]->taken = !bp_table[bpt_index]->taken; //flips entry's taken flag
                      
@@ -255,7 +259,7 @@ int main(int argc, char **argv)
                {
                   bp_table[bpt_index]->address= pipeline[2]->PC; //replaces old entry (hash collision)
                   
-                  if(pipeline[2]->Addr == pipeline[1]->PC) //branch taken
+                  if(!branch_near_end && (pipeline[2]->Addr == pipeline[1]->PC)) //branch taken
                   {
                      bp_table[bpt_index]->taken= 1;
                   
